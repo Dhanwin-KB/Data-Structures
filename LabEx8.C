@@ -1,140 +1,241 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-struct Node {
-    float expense;
-    struct Node* left;
-    struct Node* right;
+struct ExpenseNode
+{
+    int expenseID;
+    char expenseCategory[50];
+    double expenseAmount;
+    struct ExpenseNode *left;
+    struct ExpenseNode *right;
 };
 
-struct Node* createNode(float expense) {
-    struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
-    newNode->expense = expense;
+struct ExpenseNode *createExpenseNode(int expenseID, const char *expenseCategory, double expenseAmount)
+{
+    struct ExpenseNode *newNode = (struct ExpenseNode *)malloc(sizeof(struct ExpenseNode));
+    newNode->expenseID = expenseID;
+    strcpy(newNode->expenseCategory, expenseCategory);
+    newNode->expenseAmount = expenseAmount;
     newNode->left = newNode->right = NULL;
     return newNode;
 }
 
-struct Node* insert(struct Node* root, float expense) {
+struct ExpenseNode *insertExpense(struct ExpenseNode *root, int expenseID, const char *expenseCategory, double expenseAmount)
+{
     if (root == NULL)
-        return createNode(expense);
+    {
+        return createExpenseNode(expenseID, expenseCategory, expenseAmount);
+    }
 
-    if (expense < root->expense)
-        root->left = insert(root->left, expense);
-    else if (expense > root->expense)
-        root->right = insert(root->right, expense);
+    if (expenseID < root->expenseID)
+    {
+        root->left = insertExpense(root->left, expenseID, expenseCategory, expenseAmount);
+    }
+    else if (expenseID > root->expenseID)
+    {
+        root->right = insertExpense(root->right, expenseID, expenseCategory, expenseAmount);
+    }
 
     return root;
 }
 
-struct Node* search(struct Node* root, float expense) {
-    if (root == NULL || root->expense == expense)
-        return root;
-
-    if (expense < root->expense)
-        return search(root->left, expense);
-
-    return search(root->right, expense);
+void inorderExpenseTraversal(struct ExpenseNode *root)
+{
+    if (root != NULL)
+    {
+        inorderExpenseTraversal(root->left);
+        printf("Expense ID: %d, Category: %s, Amount: $%.2f\n", root->expenseID, root->expenseCategory, root->expenseAmount);
+        inorderExpenseTraversal(root->right);
+    }
 }
 
-int height(struct Node* root) {
+double calculateTotalExpenses(struct ExpenseNode *root)
+{
     if (root == NULL)
-        return -1;
-
-    int leftHeight = height(root->left);
-    int rightHeight = height(root->right);
-
-    return 1 + (leftHeight > rightHeight ? leftHeight : rightHeight);
-}
-
-void inOrderTraversal(struct Node* root) {
-    if (root != NULL) {
-        inOrderTraversal(root->left);
-        printf("%.2f ", root->expense);
-        inOrderTraversal(root->right);
+    {
+        return 0.0;
     }
+
+    return root->expenseAmount + calculateTotalExpenses(root->left) + calculateTotalExpenses(root->right);
 }
 
-void preOrderTraversal(struct Node* root) {
-    if (root != NULL) {
-        printf("%.2f ", root->expense);
-        preOrderTraversal(root->left);
-        preOrderTraversal(root->right);
+struct ExpenseNode *deleteExpense(struct ExpenseNode *root, int expenseID)
+{
+    if (root == NULL)
+    {
+        return root;
     }
-}
 
-void postOrderTraversal(struct Node* root) {
-    if (root != NULL) {
-        postOrderTraversal(root->left);
-        postOrderTraversal(root->right);
-        printf("%.2f ", root->expense);
+    if (expenseID < root->expenseID)
+    {
+        root->left = deleteExpense(root->left, expenseID);
     }
+    else if (expenseID > root->expenseID)
+    {
+        root->right = deleteExpense(root->right, expenseID);
+    }
+    else
+    {
+        if (root->left == NULL)
+        {
+            struct ExpenseNode *temp = root->right;
+            free(root);
+            return temp;
+        }
+        else if (root->right == NULL)
+        {
+            struct ExpenseNode *temp = root->left;
+            free(root);
+            return temp;
+        }
+
+        struct ExpenseNode *temp = root->right;
+        while (temp->left != NULL)
+        {
+            temp = temp->left;
+        }
+
+        root->expenseID = temp->expenseID;
+        strcpy(root->expenseCategory, temp->expenseCategory);
+        root->expenseAmount = temp->expenseAmount;
+
+        root->right = deleteExpense(root->right, temp->expenseID);
+    }
+
+    return root;
 }
 
-void freeBST(struct Node* root) {
-    if (root != NULL) {
-        freeBST(root->left);
-        freeBST(root->right);
+struct ExpenseNode *searchExpense(struct ExpenseNode *root, int expenseID)
+{
+    if (root == NULL || root->expenseID == expenseID)
+    {
+        return root;
+    }
+
+    if (expenseID < root->expenseID)
+    {
+        return searchExpense(root->left, expenseID);
+    }
+
+    return searchExpense(root->right, expenseID);
+}
+
+void freeExpenseSystem(struct ExpenseNode *root)
+{
+    if (root != NULL)
+    {
+        freeExpenseSystem(root->left);
+        freeExpenseSystem(root->right);
         free(root);
     }
 }
 
-int main() {
-    struct Node* root = NULL;
+int displayMenu()
+{
     int choice;
-    float expense;
+    printf("\nPersonal Finance Tracking System Menu:\n");
+    printf("1. Add Expense\n");
+    printf("2. Display Expenses\n");
+    printf("3. Calculate Total Expenses\n");
+    printf("4. Delete Expense\n");
+    printf("5. Search Expense\n");
+    printf("6. Exit\n");
+    printf("Enter your choice: ");
+    scanf("%d", &choice);
+    return choice;
+}
 
-    do {
-        printf("\nMenu:\n");
-        printf("1. Insert an expense\n");
-        printf("2. Search for an expense\n");
-        printf("3. Calculate BST height\n");
-        printf("4. In-order traversal\n");
-        printf("5. Pre-order traversal\n");
-        printf("6. Post-order traversal\n");
-        printf("7. Exit\n");
-        printf("Enter your choice: ");
-        scanf("%d", &choice);
+int main()
+{
+    struct ExpenseNode *expenseSystemRoot = NULL;
 
-        switch (choice) {
-            case 1:
-                printf("Enter expense amount: ");
-                scanf("%f", &expense);
-                root = insert(root, expense);
-                break;
-            case 2:
-                printf("Enter expense to search: ");
-                scanf("%f", &expense);
-                if (search(root, expense))
-                    printf("Expense found in the BST.\n");
-                else
-                    printf("Expense not found in the BST.\n");
-                break;
-            case 3:
-                printf("BST height: %d\n", height(root));
-                break;
-            case 4:
-                printf("In-order traversal: ");
-                inOrderTraversal(root);
-                printf("\n");
-                break;
-            case 5:
-                printf("Pre-order traversal: ");
-                preOrderTraversal(root);
-                printf("\n");
-                break;
-            case 6:
-                printf("Post-order traversal: ");
-                postOrderTraversal(root);
-                printf("\n");
-                break;
-            case 7:
-                freeBST(root);
-                printf("Exiting program.\n");
-                break;
-            default:
-                printf("Invalid choice. Please enter a valid option.\n");
+    int choice;
+    do
+    {
+        choice = displayMenu();
+
+        switch (choice)
+        {
+        case 1:
+        {
+            int numExpenses;
+            printf("Enter the number of expenses to add: ");
+            scanf("%d", &numExpenses);
+
+            for (int i = 0; i < numExpenses; ++i)
+            {
+                int expenseID;
+                char expenseCategory[50];
+                double expenseAmount;
+                printf("Enter Expense ID for expense %d: ", i + 1);
+                scanf("%d", &expenseID);
+                printf("Enter Expense Category for expense %d: ", i + 1);
+                scanf("%s", expenseCategory);
+                printf("Enter Expense Amount for expense %d: $", i + 1);
+                scanf("%lf", &expenseAmount);
+                expenseSystemRoot = insertExpense(expenseSystemRoot, expenseID, expenseCategory, expenseAmount);
+            }
+            break;
         }
-    } while (choice != 7);
+        case 2:
+            printf("Expense Traversal:\n");
+            inorderExpenseTraversal(expenseSystemRoot);
+            printf("\n");
+            break;
+
+        case 3:
+            printf("Total Expenses: $%.2f\n", calculateTotalExpenses(expenseSystemRoot));
+            break;
+
+        case 4:
+        {
+            int expenseToDelete;
+            printf("Enter Expense ID to delete: ");
+            scanf("%d", &expenseToDelete);
+
+            struct ExpenseNode *expenseBeforeDelete = searchExpense(expenseSystemRoot, expenseToDelete);
+
+            if (expenseBeforeDelete != NULL)
+            {
+                expenseSystemRoot = deleteExpense(expenseSystemRoot, expenseToDelete);
+                printf("Expense ID %d deleted successfully.\n", expenseToDelete);
+            }
+            else
+            {
+                printf("Expense ID %d not found! Deletion failed.\n", expenseToDelete);
+            }
+            break;
+        }
+
+        case 5:
+        {
+            int expenseToSearch;
+            printf("Enter Expense ID to search: ");
+            scanf("%d", &expenseToSearch);
+            struct ExpenseNode *foundExpense = searchExpense(expenseSystemRoot, expenseToSearch);
+            if (foundExpense != NULL)
+            {
+                printf("Expense ID %d found: Category: %s, Amount: $%.2f\n", expenseToSearch, foundExpense->expenseCategory, foundExpense->expenseAmount);
+            }
+            else
+            {
+                printf("Expense ID %d not found!\n", expenseToSearch);
+            }
+            break;
+        }
+
+        case 6:
+            printf("Exiting the program.\n");
+            break;
+
+        default:
+            printf("Invalid choice. Please try again.\n");
+        }
+
+    } while (choice != 6);
+
+    freeExpenseSystem(expenseSystemRoot);
 
     return 0;
 }
